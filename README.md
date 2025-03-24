@@ -1,6 +1,6 @@
 # RPulse - GitHub Actions Runner Monitoring
 
-A Go application for tracking GitHub Actions workflow runners demand.
+A Go application for tracking GitHub Actions workflow runners demand
 
 ![Screenshot 2025-03-24 at 13 26 52](https://github.com/user-attachments/assets/e3b256ab-0bd0-4a67-988c-63de46516c96)
 
