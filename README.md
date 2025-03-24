@@ -189,6 +189,29 @@ The webhook endpoint expects POST requests with the following JSON format:
 }
 ```
 
+## Data Retention
+
+The application implements automatic data retention policies using TimescaleDB's features. All data tables have a 30-day retention period:
+
+- Historical entries (runner counts and statistics)
+- Workflow jobs data
+- Queue time duration metrics
+
+Data older than 30 days is automatically removed to maintain optimal performance and manage storage effectively.
+
+The following views are available for data analysis:
+
+- `daily_runner_stats`: 3-minute buckets for the last 24 hours
+- `weekly_runner_stats`: 30-minute buckets for the last week
+- `monthly_runner_stats`: 2-hour buckets for the last month
+
+Each view provides aggregated statistics including:
+
+- Average self-hosted runner count
+- Average GitHub-hosted runner count
+- Average queued jobs count
+- Peak total runner demand
+
 ## Testing
 
 You can manually test the application by visiting:
