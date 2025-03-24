@@ -2,6 +2,10 @@
 
 This directory contains database migrations for the RPulse application.
 
+## Prerequisites
+
+The application requires PostgreSQL with TimescaleDB extension installed. For TimescaleDB installation instructions, please refer to the [official documentation](https://docs.timescale.com/self-hosted/latest/install/installation-docker/).
+
 ## Migration Files
 
 Migrations follow the format: `{version}_{description}.{up|down}.sql`

@@ -6,7 +6,7 @@ A Go application for tracking GitHub Actions workflow runners demand.
 
 ## Overview
 
-This application tracks running GitHub Actions workflows and provides a visual dashboard of demand over time. It includes:
+This application uses `workflow jobs` webhook events from GitHub to track running GitHub Actions workflows and provides a visual dashboard of demand over time. It includes:
 
 - A webhook endpoint to receive workflow status events
 - A dashboard to visualize runners demand over time
@@ -23,14 +23,72 @@ This application tracks running GitHub Actions workflows and provides a visual d
 
 ## Installation
 
-1. Clone this repository
-2. Install dependencies:
+### Using Published Docker Container
+
+The easiest way to get started is using the published Docker container:
 
 ```bash
-make deps
+docker pull ghcr.io/gateixeira/rpulse:latest
 ```
 
-## Running the Application
+Before running the container, make sure you have:
+
+1. A running PostgreSQL database with TimescaleDB extension installed ([Installation Guide](https://docs.timescale.com/self-hosted/latest/install/installation-docker/))
+2. The following environment variables set:
+   - `DB_HOST`: PostgreSQL host
+   - `DB_PORT`: PostgreSQL port (default: 5432)
+   - `DB_USER`: PostgreSQL user
+   - `DB_PASSWORD`: PostgreSQL password
+   - `DB_NAME`: PostgreSQL database name
+   - `WEBHOOK_SECRET`: Secret for GitHub webhook validation
+   - `PORT`: Optional, defaults to 8080
+   - `LOG_LEVEL`: Optional, defaults to info
+
+Run the container:
+
+```bash
+docker run -p 8080:8080 \
+  -e DB_HOST=your-db-host \
+  -e DB_USER=your-db-user \
+  -e DB_PASSWORD=your-db-password \
+  -e DB_NAME=your-db-name \
+  -e WEBHOOK_SECRET=your-webhook-secret \
+  ghcr.io/gateixeira/rpulse:latest
+```
+
+### Docker Compose Deployment
+
+The recommended way to run the application locally is using Docker Compose, which sets up both the application and its dependencies:
+
+```bash
+make docker-run-remote    # Start the application with docker-compose
+```
+
+This will start:
+
+- The main application container
+- A TimescaleDB instance (PostgreSQL with time-series extensions) ([Installation Guide](https://docs.timescale.com/self-hosted/latest/install/installation-docker/))
+
+The docker-compose setup includes:
+
+- Automatic database initialization
+- Health checks for database connectivity
+- Volume persistence for TimescaleDB data
+- Configurable environment variables through docker-compose.yml
+
+You can also build the Docker image separately if needed:
+
+```bash
+make docker-build  # Build the Docker image only
+```
+
+and then
+
+```bash
+make docker-run
+```
+
+to run the local image
 
 ### Local Development
 
@@ -46,27 +104,6 @@ make deps     # Install dependencies
 ```
 
 The server will start on port 8080.
-
-### Docker Deployment
-
-The application can be run using Docker:
-
-```bash
-make docker-build  # Build the Docker image
-make docker-run    # Run with docker-compose
-```
-
-This will start:
-
-- The main application
-- A TimescaleDB instance (PostgreSQL with time-series extensions)
-
-The docker-compose setup includes:
-
-- Automatic database initialization
-- Health checks for database connectivity
-- Volume persistence for TimescaleDB data
-- Configurable environment variables
 
 ### Environment Variables
 
