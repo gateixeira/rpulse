@@ -1,0 +1,58 @@
+services:
+  app:
+    profiles: ["local"]
+    build: .
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - PORT=${PORT:-8080}
+      - DB_HOST=timescaledb
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${DB_NAME:-rpulse}
+      - GIN_MODE=${GIN_MODE:-release}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+
+  app-remote:
+    profiles: ["remote"]
+    image: ghcr.io/gateixeira/rpulse:${TAG:-latest}
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - PORT=${PORT:-8080}
+      - DB_HOST=timescaledb
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${DB_NAME:-rpulse}
+      - GIN_MODE=${GIN_MODE:-release}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+
+  timescaledb:
+    image: timescale/timescaledb:2.19.0-pg16
+    environment:
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+      - POSTGRES_DB=${DB_NAME:-rpulse}
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    command: postgres -c max_connections=100 -c shared_buffers=256MB -c timescaledb.telemetry_level=off -c timescaledb.max_chunks_per_insert=16 -c timescaledb.max_open_chunks_per_insert=16
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  timescaledb_data:

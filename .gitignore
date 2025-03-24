@@ -1,0 +1,5 @@
+.DS_Store
+rpulse.db
+data/
+.env
+rpulse*
