@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RPulse - GitHub Actions Runner Monitoring</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Dark mode configuration for Tailwind
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {}
+            }
+        }
+    </script>
+    <style>
+        .dark .filter-btn.active {
+            background-color: rgb(59, 130, 246);
+            color: white;
+        }
+        
+        .dark-toggle {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .moon, .sun {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Add toggle switch styles */
+        .toggle-label {
+            background-color: #e5e7eb;
+            transition: background-color .2s;
+        }
+
+        .dark .toggle-label {
+            background-color: #374151;
+        }
+
+        #darkModeSwitch {
+            transition: transform .2s;
+            border-color: #e5e7eb;
+        }
+
+        #darkModeSwitch:checked {
+            transform: translateX(100%);
+            border-color: #3b82f6;
+        }
+
+        .dark #darkModeSwitch {
+            border-color: #374151;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">RPulse - GitHub Actions Runner Monitoring</h1>
+            
+            <!-- Dark mode toggle -->
+            <div class="dark-toggle" id="darkModeToggle">
+                <svg xmlns="http://www.w3.org/2000/svg" class="sun text-gray-500 dark:text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                    <input type="checkbox" name="darkModeSwitch" id="darkModeSwitch" class="absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer" />
+                    <label for="darkModeSwitch" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="moon text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Running Jobs</div>
+                <div class="text-3xl font-bold text-gray-900 dark:text-white" id="currentCount">0</div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Queued Jobs</div>
+                <div class="text-3xl font-bold text-gray-900 dark:text-white" id="currentQueuedCount">0</div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Historical Average Queue Time</div>
+                <div class="text-3xl font-bold text-gray-900 dark:text-white" id="avgQueueTime">0 ms</div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <div class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Peak Demand</div>
+                <div class="text-3xl font-bold text-gray-900 dark:text-white" id="peakDemand">0</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1" id="peakDemandTimestamp"></div>
+            </div>
+        </div>
+        
+        <div class="flex justify-end mb-6">
+            <div class="inline-flex rounded-md shadow-sm">
+                <span class="text-sm text-gray-700 dark:text-gray-300 px-3 py-2 inline-flex items-center">Time Period:</span>
+                <button class="filter-btn px-4 py-2 text-sm font-medium active bg-blue-600 text-white hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900 border border-gray-300 dark:border-gray-600 rounded-l-md" data-period="hour">Hour</button>
+                <button class="filter-btn px-4 py-2 text-sm font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900 border-t border-b border-gray-300 dark:border-gray-600" data-period="day">Day</button>
+                <button class="filter-btn px-4 py-2 text-sm font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900 border-t border-b border-gray-300 dark:border-gray-600" data-period="week">Week</button>
+                <button class="filter-btn px-4 py-2 text-sm font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900 border border-gray-300 dark:border-gray-600 rounded-r-md" data-period="month">Month</button>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 h-[28rem]">
+            <canvas id="demandChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Get CSRF token from the template
+        const csrfToken = "{{.csrfToken}}";
+        
+        // Dark mode management
+        const darkModeToggle = document.getElementById('darkModeSwitch');
+        const html = document.documentElement;
+        
+        // Check for saved dark mode preference or use system preference
+        if (localStorage.getItem('darkMode') === 'dark' || 
+            (localStorage.getItem('darkMode') === null && 
+             window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+            darkModeToggle.checked = true;
+        }
+        
+        // Toggle dark mode on switch change
+        darkModeToggle.addEventListener('change', function() {
+            if (this.checked) {
+                html.classList.add('dark');
+                localStorage.setItem('darkMode', 'dark');
+                updateChartForDarkMode(true);
+            } else {
+                html.classList.remove('dark');
+                localStorage.setItem('darkMode', 'light');
+                updateChartForDarkMode(false);
+            }
+        });
+        
+        // Function to update chart colors for dark mode
+        function updateChartForDarkMode(isDark) {
+            if (window.myChart) {
+                const textColor = isDark ? '#f9fafb' : '#111827';
+                window.myChart.options.scales.x.ticks.color = textColor;
+                window.myChart.options.scales.y.ticks.color = textColor;
+                window.myChart.options.scales.x.grid.color = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+                window.myChart.options.scales.y.grid.color = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+                window.myChart.options.plugins.legend.labels.color = textColor;
+                window.myChart.update();
+            }
+        }
+        
+        // Track the current period filter
+        let currentPeriod = 'hour';
+        
+        function fetchData() {
+            fetch('/running-count?period=' + currentPeriod, {
+                headers: {
+                    'X-CSRF-Token': csrfToken
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.historical_data) {
+                        updateChart(data.historical_data);
+                    } else {
+                        updateChart([]);
+                    }
+                    updateMetrics(
+                        data.current_count_github_hosted + data.current_count_self_hosted, 
+                        data.current_queued_count,
+                        data.avg_queue_time_ms || 0,
+                        data.peak_demand || 0,
+                        data.peak_demand_timestamp || ''
+                    );
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    // Optionally show an error message to the user
+                });
+        }
+
+        function updateMetrics(currentCount, currentQueued, avgQueueTimeMs, peakDemand, peakDemandTimestamp) {
+            document.getElementById('currentCount').textContent = currentCount || 0;
+            document.getElementById('currentQueuedCount').textContent = currentQueued || 0;
+            document.getElementById('peakDemand').textContent = peakDemand || 0;
+            
+            // Format the peak demand timestamp
+            if (peakDemandTimestamp) {
+                const timestamp = new Date(peakDemandTimestamp);
+                const formattedDate = timestamp.toLocaleDateString();
+                const formattedTime = timestamp.toLocaleTimeString();
+                document.getElementById('peakDemandTimestamp').textContent = `Recorded on ${formattedDate} at ${formattedTime}`;
+            } else {
+                document.getElementById('peakDemandTimestamp').textContent = '';
+            }
+            
+            // Format the queue time nicely
+            let formattedTime;
+            if (avgQueueTimeMs < 1000) {
+                formattedTime = avgQueueTimeMs + " ms";
+            } else if (avgQueueTimeMs < 60000) {
+                formattedTime = (avgQueueTimeMs / 1000).toFixed(1) + " sec";
+            } else {
+                formattedTime = (avgQueueTimeMs / 60000).toFixed(1) + " min";
+            }
+            document.getElementById('avgQueueTime').textContent = formattedTime;
+        }
+        
+        function updateChart(historicalData) {
+            const timestamps = historicalData.map(entry => new Date(entry.timestamp).toLocaleTimeString());
+            const githubHostedCounts = historicalData.map(entry => entry.count_github_hosted);
+            const selfHostedCounts = historicalData.map(entry => entry.count_self_hosted);
+            const queuedCounts = historicalData.map(entry => entry.count_queued);
+            const totalCounts = historicalData.map(entry => entry.count_github_hosted + entry.count_self_hosted + entry.count_queued);
+            const ctx = document.getElementById('demandChart').getContext('2d');
+            
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            const textColor = isDarkMode ? '#f9fafb' : '#111827';
+            const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            
+            if (window.myChart) {
+                window.myChart.destroy();
+            }
+            window.myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: timestamps,
+                    datasets: [
+                        {
+                            label: 'GitHub-hosted Jobs',
+                            data: githubHostedCounts,
+                            borderColor: 'rgb(75, 192, 192)',
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: 'Self-hosted Jobs',
+                            data: selfHostedCounts,
+                            borderColor: 'rgb(255, 99, 132)',
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: 'Queued Jobs',
+                            data: queuedCounts,
+                            borderColor: 'rgb(255, 159, 64)',
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: 'Total Jobs',
+                            data: totalCounts,
+                            borderColor: 'rgb(54, 162, 235)',
+                            tension: 0.1,
+                            fill: false
+                        }   
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: textColor
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                color: textColor
+                            },
+                            grid: {
+                                color: gridColor
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: textColor
+                            },
+                            grid: {
+                                color: gridColor
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Set up event listeners for filter buttons
+        document.querySelectorAll('.filter-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('active', 'bg-blue-600', 'text-white');
+                    btn.classList.add('bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300');
+                });
+                
+                // Add active class to clicked button
+                this.classList.add('active', 'bg-blue-600', 'text-white');
+                this.classList.remove('bg-white', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300');
+                
+                // Update current period and fetch new data
+                currentPeriod = this.getAttribute('data-period');
+                fetchData();
+            });
+        });
+        
+        // Initial fetch
+        fetchData();
+        // Apply initial dark mode setting to chart
+        setTimeout(() => {
+            updateChartForDarkMode(document.documentElement.classList.contains('dark'));
+        }, 100);
+        // Refresh data every 30 seconds
+        setInterval(fetchData, 30000);
+    </script>
+</body>
+</html>
