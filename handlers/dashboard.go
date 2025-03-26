@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"html/template"
 	"net/http"
 	"net/url"
 	"time"
@@ -9,10 +10,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type DashboardHandler struct{}
+type DashboardHandler struct {
+	template *template.Template
+}
 
 func NewDashboardHandler() *DashboardHandler {
-	return &DashboardHandler{}
+	// Parse templates at initialization
+	tmpl, err := template.ParseFiles("templates/dashboard.html")
+	if err != nil {
+		// Log error but don't panic - will attempt to reload template on each request if not loaded
+		return &DashboardHandler{}
+	}
+	return &DashboardHandler{
+		template: tmpl,
+	}
 }
 
 // ValidateDashboardOrigin middleware ensures requests come from the dashboard UI
@@ -94,9 +105,26 @@ func (h *DashboardHandler) Dashboard() gin.HandlerFunc {
 			true,                        // HTTP only
 		)
 
-		// Pass CSRF token to template
-		c.HTML(http.StatusOK, "dashboard.html", gin.H{
+		// Create template data
+		templateData := gin.H{
 			"csrfToken": csrfToken,
-		})
+			"timestamp": time.Now().Unix(), // Add timestamp to prevent caching
+		}
+
+		// If template wasn't loaded at initialization, try loading it now
+		if h.template == nil {
+			tmpl, err := template.ParseFiles("templates/dashboard.html")
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load template"})
+				return
+			}
+			h.template = tmpl
+		}
+
+		// Render template with data
+		c.Header("Cache-Control", "no-store, must-revalidate")
+		c.Header("Pragma", "no-cache")
+		c.Header("Expires", "0")
+		c.HTML(http.StatusOK, "dashboard.html", templateData)
 	}
 }
