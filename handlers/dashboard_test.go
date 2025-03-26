@@ -13,7 +13,10 @@ import (
 func setupDashboardTest() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.Default()
-	router.LoadHTMLGlob("../templates/*")
+
+	// Set the correct template path relative to the test file
+	router.LoadHTMLGlob("../templates/*.html")
+
 	handler := NewDashboardHandler()
 	router.GET("/dashboard", handler.Dashboard())
 	return router
